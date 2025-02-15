@@ -13,9 +13,11 @@ from pathlib import Path
 import re
 from typing import Optional
 from datetime import *
-
+from dotenv import load_dotenv
 from starlette.responses import PlainTextResponse
 from sklearn.metrics.pairwise import cosine_similarity
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -347,30 +349,27 @@ def do_a6(input_file: str, output_file: str, header_level: str = "#", occurrence
 
     # Iterate over files in the input directory
     for file in os.listdir(input_file):
-        if file.endswith(".md"):
-            # Construct the full file path
-            file_path = os.path.join(input_file, file)
+        for file1 in os.listdir (os.path.join (input_file, file)):
+            if file1.endswith('.md'):  # Process only Markdown files
+                file_path = os.path.join(input_file, file, file1)
+                h1_header = extract_h1_from_markdown(file_path)
+                if h1_header:
+                    index[file_path[11:].replace("\\", "/")] = h1_header
 
-            # Read the file and extract the specified header
-            with open(file_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-
-            # Find the specified occurrence of the header
-            header_count = 0
-            for line in lines:
-                if line.strip().startswith(header_level + " "):
-                    header_count += 1
-                    if header_count == occurrence:
-                        # Extract the title (remove the header level and leading/trailing whitespace)
-                        title = line.strip()[len(header_level) + 1:].strip()
-                        index[file] = title  # Use the filename as the key
-                        break
 
     # Write the index to the output file
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(index, f, indent=4)
 
     print(f"Index created successfully at {output_file}")
+
+def extract_h1_from_markdown(file_path):
+    """Extract the first H1 header from a Markdown file."""
+    with open(file_path, 'r', encoding='utf-8') as file:
+        for line in file:
+            if line.startswith('# '):  # H1 header is denoted by '# '
+                return line[2:].strip()  # Return H1 header without '# '
+    return None
 
 
 def do_a10(input_file: str, output_file: str, query: str):
@@ -670,4 +669,4 @@ async def test1():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
