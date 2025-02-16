@@ -1,6 +1,5 @@
 import base64
 
-import httpx
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query
 import requests
@@ -13,11 +12,9 @@ from pathlib import Path
 import re
 from typing import Optional
 from datetime import *
-from dotenv import load_dotenv
+
 from starlette.responses import PlainTextResponse
 from sklearn.metrics.pairwise import cosine_similarity
-
-load_dotenv()
 
 app = FastAPI()
 
@@ -49,7 +46,7 @@ def call_llm(prompt: str):
     return response.json()["choices"][0]["message"]["content"]
 
 
-def process_image(image_path: str, input_prompt: str):
+def process_image(image_path: str, input_prompt:str) :
     """
     Process an image file for AI analysis.
 
@@ -88,8 +85,10 @@ def process_image(image_path: str, input_prompt: str):
 
 
     except Exception as e:
-        print("Error processing image", e)
+        print("Error processing image",e)
         return 500
+
+
 
 
 # Hardcoded functions for tasks that don't need code generation
@@ -111,7 +110,6 @@ def fetch_text_embeddings(texts):
         print(f"An error occurred in embedding: {e}")
         raise Exception(e)
 
-
 def path_verify(path: str, input_file: bool):
     if os.path.exists(path):
         return Path(path).resolve()
@@ -120,20 +118,15 @@ def path_verify(path: str, input_file: bool):
     else:
         return Path(path).resolve()
 
-
 def do_a1(email):
-    # CHANGE TO MY EMAIL BEFORE SUBMISSION KJZDKDVKJ
-    # LKSDVSNLVFNLKFVNLVF
-    # KNKLVFMVFKM
+
+    #CHANGE TO MY EMAIL BEFORE SUBMISSION KJZDKDVKJ
+    #LKSDVSNLVFNLKFVNLVF
+    #KNKLVFMVFKM
     ##################
 
-    #################
 
-    try:
-        subprocess.run(["uv", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except subprocess.CalledProcessError:
-        subprocess.run(["pip", "install", "uv"], check=True)  # Install if missing
-        
+    #################
     subprocess.run([
         "uv",
         "run",
@@ -144,8 +137,8 @@ def do_a1(email):
     ], check=True)
 
 
-def do_a2(input_file: str, output_file: str, prettier_version: str) -> int:
-    # completed
+def do_a2(input_file: str, output_file: str, prettier_version :str) -> int:
+    #completed
     abs_input_file = os.path.abspath(input_file)
     print(f"Checking file path: {input_file}")
     print(f"Absolute path: {abs_input_file}")
@@ -180,13 +173,11 @@ def do_a2(input_file: str, output_file: str, prettier_version: str) -> int:
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
         return 500
-
-
-def do_a7(input_file, output_file, input_prompt):
-    # completed
+def do_a7(input_file,output_file,input_prompt):
+    #completed
     email_content = Path(input_file).read_text()
     messages = [
-        {"role": "system", "content": input_prompt},
+        {"role": "system", "content": input_prompt },
         {"role": "user", "content": email_content}
     ]
 
@@ -194,10 +185,10 @@ def do_a7(input_file, output_file, input_prompt):
     Path(output_file).write_text(result.strip())
 
 
-def do_a8(input_file, output_file, input_prompt):
-    # completed
+def do_a8(input_file,output_file,input_prompt):
+    #completed
     # Assuming process_image is a function that uses an LLM to extract text from an image
-    result = process_image(input_file, input_prompt)
+    result = process_image(input_file,input_prompt)
     Path(output_file).write_text(result)
 
 
@@ -210,38 +201,41 @@ def do_a9(input_file,output_file):
 """
 
 
-def do_a9(input_file: str, output_file: str, num_similar_texts: int):
+def do_a9(input_file: str, output_file: str):
     input_file = path_verify(input_file, True)
     output_file = path_verify(output_file, False)
 
     try:
-        with open(input_file, "r") as file:
-            documents = file.readlines()
+        # Read comments
+        with open(input_file, "r", encoding="utf-8") as file:
+            documents = [line.strip() for line in file.readlines() if line.strip()]
+        
+        if len(documents) < 2:
+            raise ValueError("Not enough comments to find a similar pair.")
 
-        documents = [comment.strip() for comment in documents]
-
+        # Get embeddings
         line_embeddings = fetch_text_embeddings(documents)
         similarity_matrix = cosine_similarity(line_embeddings)
 
+        # Ignore self-similarity by setting the diagonal to -1
         np.fill_diagonal(similarity_matrix, -1)
-        most_similar_indices = np.unravel_index(
-            np.argmax(similarity_matrix), similarity_matrix.shape
-        )
 
-        print("most similarities ", most_similar_indices)
-        similar_texts = []
-        for i in range(num_similar_texts):
-            similar_texts.append(documents[most_similar_indices[i]])
+        # Find the most similar pair (highest similarity score)
+        idx1, idx2 = np.unravel_index(np.argmax(similarity_matrix), similarity_matrix.shape)
 
-        with open(output_file, "w") as file:
-            for text in similar_texts:
-                file.write(text + "\n")
+        # Extract the most similar comments
+        similar_texts = [documents[idx1], documents[idx2]]
 
-        print(f"Similar texts written to {output_file}")
-        return "Successfully found the similarities."
+        # Write to file
+        with open(output_file, "w", encoding="utf-8") as file:
+            file.write("\n".join(similar_texts) + "\n")
+
+        print(f"✅ Similar texts written to {output_file}")
+        return {"message": "Successfully found the most similar comments.", "status_code": 200}
+
     except Exception as e:
-        print(f"An error occurred: {e}")
-        raise Exception(e)
+        print(f"❌ Error in do_a9: {e}")
+        return {"error": str(e), "status_code": 500}
 
 
 # Functions for tasks that require dynamic code generation
@@ -249,7 +243,7 @@ from datetime import datetime
 
 
 def do_a3(input_file: str, output_file: str, day: str):
-    # completed
+    #completed
     # Define a list of possible date formats
     date_formats = [
         "%Y-%m-%d",  # e.g., 2023-10-01
@@ -318,12 +312,111 @@ def do_a4(input_file: str, output_file: str, keys: list):
 
 
 def do_a5(input_file: str, output_file: str, num_files: int):
-    # Completed
+    #Completed
     log_dir = Path(input_file)
     log_files = sorted(log_dir.glob("*.log"), key=lambda x: x.stat().st_mtime, reverse=True)[:num_files]
     first_lines = [log.read_text().splitlines()[0] for log in log_files]
     Path(output_file).write_text("\n".join(first_lines))
 
+
+"""def do_a6(docs_dir: str, output_file: str):
+    try:
+        if not os.path.exists(docs_dir):
+            print(f"❌ Directory {docs_dir} does not exist.")
+            raise HTTPException(status_code=400, detail=f"Docs directory {docs_dir} does not exist")
+
+        print(f"📂 Scanning {docs_dir} for Markdown files...")
+
+        def get_h1_title(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.startswith('# '):
+                        return line.strip('# ').strip()
+            return None
+
+        index = {}
+        for root, _, files in os.walk(docs_dir):
+            for file in files:
+                if file.endswith('.md'):
+                    full_path = os.path.join(root, file)
+                    title = get_h1_title(full_path)
+                    if title:
+                        relative_path = os.path.relpath(full_path, docs_dir)
+                        index[relative_path] = title
+                        print(f"✅ Extracted title from {file}: {title}")
+
+        print("Generated Index:", index)
+
+        if not index:
+            print("❌ No valid Markdown files found or no H1 headers present.")
+            raise HTTPException(status_code=400, detail="No valid Markdown files found or no H1 headers present.")
+
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(index, f, ensure_ascii=False, indent=4)
+            f.flush()  # Ensure the file is written before closing
+
+        print(f"📄 Successfully created {output_file}")
+        return {"message": "Task execution successful", "status_code": 200}
+    
+    except Exception as e:
+        print("🚨 Error in A6:", e)
+        raise HTTPException(status_code=500, detail=str(e))"""
+
+
+"""def extract_h1_from_markdown(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                if line.startswith('# '):  # H1 header is denoted by '# '
+                    print(f"✅ Found H1 in {file_path}: {line[2:].strip()}")  # Debug
+                    return line[2:].strip()  # Return H1 header without '# '
+    except Exception as e:
+        print(f"❌ Error reading {file_path}: {e}")
+    return None
+
+def do_a6(docs_dir: str, output_file: str):
+    index = {}
+
+    try:
+        if not os.path.exists(docs_dir):
+            print(f"❌ Error: Directory '{docs_dir}' not found.")
+            return {"error": f"Directory '{docs_dir}' not found", "status_code": 400}
+
+        print(f"📂 Scanning directory: {docs_dir}")
+        
+        for root, _, files in os.walk(docs_dir):
+            for file in files:
+                if file.endswith('.md'):  # Process only Markdown files
+                    file_path = os.path.join(root, file)
+                    h1_header = extract_h1_from_markdown(file_path)
+                    if h1_header:
+                        relative_path = os.path.relpath(file_path, docs_dir)
+                        index[relative_path] = h1_header
+        
+        print(f"📄 Extracted H1 headers: {index}")  # Debug log
+
+        if not index:
+            print("⚠️ No valid H1 headers found. Skipping JSON write.")
+            return {"error": "No H1 headers found in Markdown files", "status_code": 400}
+
+        with open(output_file, 'w', encoding='utf-8') as json_file:
+            json.dump(index, json_file, indent=4, ensure_ascii=False)
+
+        print(f"✅ Index successfully written to {output_file}")
+
+        # Verify file was written
+        with open(output_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+            if not content.strip():
+                print(f"❌ Output file {output_file} is empty!")
+                return {"error": "Output file is empty", "status_code": 500}
+            print(f"📑 Output file content:\n{content}")
+
+        return {"message": "Index created successfully", "status_code": 200}
+
+    except Exception as e:
+        print(f"❌ Error in do_a6: {e}")
+        return {"error": str(e), "status_code": 500}"""
 
 def do_a6(input_file: str, output_file: str, header_level: str = "#", occurrence: int = 1):
     """
@@ -349,13 +442,24 @@ def do_a6(input_file: str, output_file: str, header_level: str = "#", occurrence
 
     # Iterate over files in the input directory
     for file in os.listdir(input_file):
-        for file1 in os.listdir (os.path.join (input_file, file)):
-            if file1.endswith('.md'):  # Process only Markdown files
-                file_path = os.path.join(input_file, file, file1)
-                h1_header = extract_h1_from_markdown(file_path)
-                if h1_header:
-                    index[file_path[11:].replace("\\", "/")] = h1_header
+        if file.endswith(".md"):
+            # Construct the full file path
+            file_path = os.path.join(input_file, file)
 
+            # Read the file and extract the specified header
+            with open(file_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            # Find the specified occurrence of the header
+            header_count = 0
+            for line in lines:
+                if line.strip().startswith(header_level + " "):
+                    header_count += 1
+                    if header_count == occurrence:
+                        # Extract the title (remove the header level and leading/trailing whitespace)
+                        title = line.strip()[len(header_level) + 1:].strip()
+                        index[file] = title  # Use the filename as the key
+                        break
 
     # Write the index to the output file
     with open(output_file, "w", encoding="utf-8") as f:
@@ -363,129 +467,124 @@ def do_a6(input_file: str, output_file: str, header_level: str = "#", occurrence
 
     print(f"Index created successfully at {output_file}")
 
-def extract_h1_from_markdown(file_path):
-    """Extract the first H1 header from a Markdown file."""
-    with open(file_path, 'r', encoding='utf-8') as file:
-        for line in file:
-            if line.startswith('# '):  # H1 header is denoted by '# '
-                return line[2:].strip()  # Return H1 header without '# '
-    return None
-
 
 def do_a10(input_file: str, output_file: str, query: str):
-    # completed
+    #completed
     with sqlite3.connect(input_file) as conn:
         cursor = conn.cursor()
         cursor.execute(query)
         total_sales = cursor.fetchone()[0]
         Path(output_file).write_text(str(total_sales))
 
-import os
-import subprocess
-import httpx
-from fastapi import HTTPException
+def B1(self):
+    # Test that no data outside /data is accessed
+    invalid_path = '../outside_data.txt'
+    with self.assertRaises(Exception) as context:
+        B3('https://jsonplaceholder.typicode.com/todos/1', invalid_path)
+    self.assertIn("Access outside /data is not allowed.", str(context.exception))
+
+def B3(self):
+    url = 'https://jsonplaceholder.typicode.com/todos/1'
+    savepath = 'data/test_B3.json'
+    B3(url, savepath)
+    self.assertTrue(os.path.exists(savepath))
 
 
-def do_task(prompt: str):
-    """
-    Dynamically generate and execute Python or Bash code to complete a task.
-    The code can only access files within /data and cannot delete any files.
-    """
+def B12(filepath):
+    if filepath.startswith("data"):
+        return True
+    else:
+        raise Exception("Access outside /data is not allowed.")
+
+# B3: Fetch Data from an API
+def B3(url, savepath):
+    if not B12(savepath):
+        raise Exception("Invalid save path.")
+    import requests
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch data from {url}. Status code: {response.status_code}")
+    with open(savepath, 'w') as file:
+        file.write(response.text)
+
+# B4: Clone a Git Repo and Make a Commit
+# def clone_git_repo(repo_url, commit_message):
+#     import subprocess
+#     subprocess.run(["git", "clone", repo_url, "/data/repo"])
+#     subprocess.run(["git", "-C", "/data/repo", "commit", "-m", commit_message])
+
+# B5: Run SQL Query
+def B5(dbpath, query, outputfilename):
+    if not B12(dbpath):
+        raise Exception("Invalid database path.")
+    import sqlite3
     try:
-        # Step 1: Ask the LLM to generate the code
-        api_key = os.getenv('OPENAI_API_KEY')
-        response = httpx.post(
-            "http://aiproxy.sanand.workers.dev/openai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "gpt-4o-mini",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": """
-                        You are a code generation assistant. Given a task, generate only a Python code to complete it.
-                        The code must adhere to the following constraints:
-                        1. It can only access files within the `/data` directory.
-                        2. It cannot delete any files, no matter what.
-                        3. It can use the following Python packages: os, json, httpx, subprocess, pathlib, re, datetime, numpy, sqlite3, base64, sklearn.metrics.pairwise.
-                        4. It can use standard Unix utilities in Bash: curl, jq, git, awk, sed, grep, find, mkdir, cp, mv, etc.
-                        5. Return only the code, without any explanations or markdown formatting.
-                        """
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-            },
-        )
-
-        # Extract the generated code from the LLM response
-        generated_code = response.json()["choices"][0]["message"]["content"]
-        
-        # Remove 'python' if it appears at the beginning
-        lines = generated_code.splitlines()
-        if lines and lines[0].strip().lower() == "python":
-            generated_code = "\n".join(lines[1:])
-        cleaned_response = re.sub(r"^```(?:python)?\n?|```$", "", generated_code.strip(), flags=re.IGNORECASE)
-
-        # Step 2: Write the sanitized code to a temporary file
-        script_path = "/data/temp_script.py" if "import" in generated_code.lower() else "/data/temp_script.sh"
-        
-        with open(script_path, "w") as script_file:
-            script_file.write(cleaned_response)
-            
-        # Step 3: Execute the generated code
-        if script_path.endswith(".py"):
-            result = subprocess.run(
-                ["python", script_path],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-        else:
-            if os.name == "nt":  # Check if the OS is Windows
-                bash_path = "C:\\Program Files\\Git\\bin\\bash.exe"
-                if not os.path.exists(bash_path):
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Git Bash is required to execute Bash scripts on Windows. Please install Git for Windows.",
-                    )
-                result = subprocess.run(
-                    [bash_path, script_path],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-            else:
-                os.chmod(script_path, 0o755)
-                result = subprocess.run(
-                    [script_path],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-
-        # Step 4: Clean up the temporary script file
-        os.remove(script_path)
-
-        # Step 5: Return the result
-        return {
-            "message": "Task executed successfully",
-            "status_code": 200,
-            "output": result.stdout,
-        }
-
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Task execution failed: {e.stderr}",
-        )
+        conn = sqlite3.connect(dbpath)
+        cur = conn.cursor()
+        cur.executescript(query)  # Use executescript for multiple statements
+        result = cur.fetchall()
+        conn.close()
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred: {str(e)}",
-        )
+        raise Exception(f"SQL execution failed: {e}")
+    with open(outputfilename, 'w') as file:
+        file.write(str(result))
+    return result
+
+
+# B6: Web Scraping
+def B6(url, output_filename):
+    import requests
+    result = requests.get(url).text
+    with open(output_filename, 'w') as file:
+        file.write(str(result))
+
+# B7: Image Processing
+def B7(imagepath, outputpath, resize=None):
+    from PIL import Image
+    if not B12(imagepath) or not B12(outputpath):
+        raise Exception("Invalid file path.")
+    try:
+        img = Image.open(imagepath)
+        if resize:
+            img = img.resize(resize)
+        img.save(outputpath)
+    except Exception as e:
+        raise Exception(f"Image processing failed: {e}")
+
+
+# B8: Audio Transcription
+# def B8(audio_path):
+#     import openai
+#     if not B12(audio_path):
+#         return None
+#     with open(audio_path, 'rb') as audio_file:
+#         return openai.Audio.transcribe("whisper-1", audio_file)
+
+# B9: Markdown to HTML Conversion
+def B9(mdpath, outputpath):
+    import markdown
+    if not B12(mdpath) or not B12(outputpath):
+        raise Exception("Invalid file path.")
+    try:
+        with open(mdpath, 'r') as file:
+            html = markdown.markdown(file.read())
+        with open(outputpath, 'w') as file:
+            file.write(html)
+    except Exception as e:
+        raise Exception(f"Markdown conversion failed: {e}")
+
+# B10: API Endpoint for CSV Filtering
+# from flask import Flask, request, jsonify
+# app = Flask(__name__)
+# @app.route('/filter_csv', methods=['POST'])
+# def filter_csv():
+#     import pandas as pd
+#     data = request.json
+#     csv_path, filter_column, filter_value = data['csv_path'], data['filter_column'], data['filter_value']
+#     B12(csv_path)
+#     df = pd.read_csv(csv_path)
+#     filtered = df[df[filter_column] == filter_value]
+#     return jsonify(filtered.to_dict(orient='records'))
 
 
 # Classifier function to determine the task type and parameters
@@ -495,7 +594,7 @@ def classify_task(task_description: str):
     available_functions = {
         "do_a1": {
             "description": "Install uv and run datagen.py with the provided email.",
-            "input": "email (str): The email to pass as an argument. Just return the email ONLY.",
+            "input": "email (str): The email to pass as an argument . Just return this email ONLY.",
             "output": "None",
             "parameters": {"email": "The email to use."}
         },
@@ -503,8 +602,7 @@ def classify_task(task_description: str):
             "description": "Format the contents of /data/format.md using prettier@3.4.2.",
             "input": "input_file (str): Path to the file to be formatted",
             "output": "output_file (str): Path to the file to be formatted in place, same as input_file",
-            "parameters": {
-                "prettier_version": "the prettier version which has been mentioned in the prompt, to be given in the format: prettier@version . Eg: prettier@3.4.2 . If no version is mentioned return prettier#3.4.2 by default. "}
+            "parameters": {"prettier_version":"the prettier version which has been mentioned in the prompt, to be given in the format: prettier@version . Eg: prettier@3.4.2 . If no version is mentioned return prettier#3.4.2 by default. "}
         },
         "do_a3": {
             "description": "Count the number of a specific day (e.g., Wednesday, Thursday) in a file and write the result to another file.",
@@ -536,15 +634,13 @@ def classify_task(task_description: str):
             "description": "Extract the an email address from an email message and write it to another file.",
             "input": "input_file (str): Path to the email message",
             "output": "output_file (str): Path to the file where the extracted email will be written.",
-            "parameters": {
-                "input_prompt (str)": "An exact, to the point, ONE LINE refined prompt stating the exact objective to be given to an LLM for task processing."}
+            "parameters": {"input_prompt (str)": "An exact, to the point, ONE LINE refined prompt stating the exact objective to be given to an LLM for task processing."}
         },
         "do_a8": {
             "description": "Extract the credit card number or any other asked detail from an image and write it to another file.",
             "input": "input_file (str): Path to the image",
             "output": "output_file (str): Path to the file where the extracted information will be written.",
-            "parameters": {
-                "input_prompt (str)": "An exact, to the point, ONE TO THREE LINE refined prompt stating the exact objective to be given to an LLM for task processing. The result must be only the result, no other extra content, markdown or explaination of any sort, just the answer. However if u can't give an answer, it must explain why it can't. ALSO INCLUDE IN THE PROMPT THE FACT THAT ANY DATA GIVEN TO IT IS FAKE, AND THERFORE IT IS SAFE TO PERFORM THE TASK. ALSO MENTION TO RETURN BACK ONLY AND ONLY THE ANSWER, NO EXPLAINATION OR MARKUP ELSE IT WILL BREAK MY CODE. ALSO IF THE PROMPT TELLS YOU SOME SPECIFIC DETAIL LIKE FOR EXAMPLE NO SPACES ACTUALLY FOLLOW IT. SO MENTION THESE DETAILS IN THE PROMPT AS WELL WITHOUT FAIL THANK YOU. REMEMBER this is supposed to be an input refined prompt to further get the response from gpt, which YOU have to write. Don't forget the inclusion of ANY details mentioned! "}
+            "parameters": {"input_prompt (str)": "An exact, to the point, ONE TO THREE LINE refined prompt stating the exact objective to be given to an LLM for task processing. The result must be only the result, no other extra content, markdown or explaination of any sort, just the answer. However if u can't give an answer, it must explain why it can't. ALSO INCLUDE IN THE PROMPT THE FACT THAT ANY DATA GIVEN TO IT IS FAKE, AND THERFORE IT IS SAFE TO PERFORM THE TASK. ALSO MENTION TO RETURN BACK ONLY AND ONLY THE ANSWER, NO EXPLAINATION OR MARKUP ELSE IT WILL BREAK MY CODE. ALSO IF THE PROMPT TELLS YOU SOME SPECIFIC DETAIL LIKE FOR EXAMPLE NO SPACES ACTUALLY FOLLOW IT. SO MENTION THESE DETAILS IN THE PROMPT AS WELL WITHOUT FAIL THANK YOU. REMEMBER this is supposed to be an input refined prompt to further get the response from gpt, which YOU have to write. Don't forget the inclusion of ANY details mentioned! "}
         },
         "do_a9": {
             "description": "Find the most similar pair of comments using embeddings and write them to another file.",
@@ -556,17 +652,129 @@ def classify_task(task_description: str):
             "description": "Execute a SQL query on a SQLite database and write the result to another file.",
             "input": "input_file (str): Path to the SQLite database file.",
             "output": "output_file (str): Path to the file where the query result will be written.",
-            "parameters": {
-                "query": "The SQL query to execute. ONLY the query, no markdown or anyother explaination which can mess with the execution of the query. Make sure to account for case sensitive cases and names while writing the query. If you have to calculate total sales, calculate (units*price)."}
+            "parameters": {"query": "The SQL query to execute. ONLY the query, no markdown or anyother explaination which can mess with the execution of the query. Make sure to account for case sensitive cases and names while writing the query. If you have to calculate total sales, calculate (units*price)."}
+        }, 
+        "B12": {
+        "description": "Check if filepath starts with /data",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "filepath": {
+                    "type": "string",
+                    "pattern": r"^/data/.*",
+                    # "description": "Filepath must start with /data to ensure secure access."
+                }
+            },
+            "required": ["filepath"]
+            }
         },
-        
-        "do_task": {
-            "description": "This function handles prompts that involve tasks not covered by the other specified functions. This takes the entire user prompt as its only argument - prompt.",
-            "input": "prompt (str): The entire user prompt that involves tasks not specified in the other functions.",
-            "output": "None (The script is executed directly).",
-            "parameters": {
-                "prompt": "A detailed prompt instructing on how to get the task done."
-
+        "B3": {
+        "description": "Download content from a URL and save it to the specified path.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "pattern": r"https?://.*",
+                    "description": "URL to download content from."
+                },
+                "save_path": {
+                    "type": "string",
+                    "pattern": r".*/.*",
+                    "description": "Path to save the downloaded content."
+                }
+            },
+            "required": ["url", "save_path"]
+            }
+        },
+        "B5": {
+        "description": "Execute a SQL query on a specified database file and save the result to an output file.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "db_path": {
+                    "type": "string",
+                    "pattern": r".*/(.*\.db)",
+                    "description": "Path to the SQLite database file."
+                },
+                "query": {
+                    "type": "string",
+                    "description": "SQL query to be executed on the database."
+                },
+                "output_filename": {
+                    "type": "string",
+                    "pattern": r".*/(.*\.txt)",
+                    "description": "Path to the file where the query result will be saved."
+                }
+            },
+            "required": ["db_path", "query", "output_filename"]
+            }
+        },
+        "B6": {
+        "description": "Fetch content from a URL and save it to the specified output file.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "pattern": r"https?://.*",
+                    "description": "URL to fetch content from."
+                },
+                "output_filename": {
+                    "type": "string",
+                    "pattern": r".*/.*",
+                    "description": "Path to the file where the content will be saved."
+                }
+            },
+            "required": ["url", "output_filename"]
+            }
+        },
+        "B7": {
+        "description": "Process an image by optionally resizing it and saving the result to an output path.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "image_path": {
+                    "type": "string",
+                    "pattern": r".*/(.*\.(jpg|jpeg|png|gif|bmp))",
+                    "description": "Path to the input image file."
+                },
+                "output_path": {
+                    "type": "string",
+                    "pattern": r".*/.*",
+                    "description": "Path to save the processed image."
+                },
+                "resize": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "description": "Optional. Resize dimensions as [width, height]."
+                }
+            },
+            "required": ["image_path", "output_path"]
+            }
+        },
+        "B9": {
+        "description": "Convert a Markdown file to another format and save the result to the specified output path.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "md_path": {
+                    "type": "string",
+                    "pattern": r".*/(.*\.md)",
+                    "description": "Path to the Markdown file to be converted."
+                },
+                "output_path": {
+                    "type": "string",
+                    "pattern": r".*/.*",
+                    "description": "Path where the converted file will be saved."
+                }
+            },
+            "required": ["md_path", "output_path"]
             }
         }
     }
@@ -590,23 +798,20 @@ def classify_task(task_description: str):
         "output_file": "<path to the output file>",
         "parameters": {{"<key>": "<value>"}}  // Optional, depending on the task
     }}
-
-    NO MARKDOWN FOR THIS JSON OUTPUT AT ALL ALRIGHT???? 
     """
     try:
         response = call_llm(prompt)
         print(response)
     except Exception as e:
         print(e)
-    # return json.loads(response)
+    #return json.loads(response)
     cleaned_response = re.sub(r"^['\"]{3}json\n?|['\"]{3}$", "", response.strip(), flags=re.IGNORECASE)
-
     return json.loads(cleaned_response)
-
 
 # API endpoint to execute tasks
 @app.post("/run")
 async def run_task(task: str = Query(..., description="The task description")):
+
     try:
         # Classify the task and get the parameters
         classification = classify_task(task)
@@ -614,13 +819,14 @@ async def run_task(task: str = Query(..., description="The task description")):
         input_file = classification.get("input_file", "")
         output_file = classification.get("output_file", "")
         parameters = classification.get("parameters", {})
+        arguments=classification["arguments"]
 
         # Execute the appropriate function
         if function_name == "do_a1":
             print("here2")
-            do_a1(parameters.get("email", ""))
+            do_a1(parameters.get("email",""))
         elif function_name == "do_a2":
-            do_a2(input_file, output_file, parameters.get("prettier_version", "prettier@3.4.2"))
+            do_a2(input_file,output_file, parameters.get("prettier_version","prettier@3.4.2"))
         elif function_name == "do_a3":
             do_a3(input_file, output_file, parameters.get("day", ""))
         elif function_name == "do_a4":
@@ -628,20 +834,27 @@ async def run_task(task: str = Query(..., description="The task description")):
         elif function_name == "do_a5":
             do_a5(input_file, output_file, parameters.get("num_files", 10))
         elif function_name == "do_a6":
-            do_a6(input_file, output_file, parameters.get("header_level", "#"), parameters.get("occurence", 1))
+            do_a6(input_file, output_file, parameters.get("header_level", "#"), parameters.get("occurence",1))
         elif function_name == "do_a7":
-            do_a7(input_file, output_file,
-                  parameters.get("input_prompt", "Extract sender's email and return only that as your output"))
+            do_a7(input_file,output_file,parameters.get("input_prompt", "Extract sender's email and return only that as your output"))
         elif function_name == "do_a8":
-            do_a8(input_file, output_file, parameters.get("input_prompt",
-                                                          "Extract the credit card number from the image at /data/credit-card.png."))
+            do_a8(input_file,output_file,parameters.get("input_prompt", "Extract the credit card number from the image at /data/credit-card.png."))
         elif function_name == "do_a9":
-            do_a9(input_file, output_file, parameters.get("num_similar_texts", 2))
+            do_a9(input_file,output_file)
         elif function_name == "do_a10":
             do_a10(input_file, output_file, parameters.get("query", ""))
-
-        elif function_name == "do_task":
-            do_task(parameters.get("prompt", ""))
+        elif function_name == "B12":
+            B12(**json.loads(arguments))
+        elif function_name == "B3":
+            B3(**json.loads(arguments))
+        elif function_name == "B5":
+            B5(**json.loads(arguments))
+        elif function_name == "B6":
+            B6(**json.loads(arguments))
+        elif function_name == "B7":
+            B7(**json.loads(arguments))
+        elif function_name == "B9":
+            B9(**json.loads(arguments))
         else:
             raise HTTPException(status_code=400, detail="Unsupported task")
 
@@ -652,7 +865,7 @@ async def run_task(task: str = Query(..., description="The task description")):
 
 
 # API endpoint to read files
-@app.get("/read", response_class=PlainTextResponse)
+@app.get("/read",response_class=PlainTextResponse)
 async def read_file(path: str = Query(..., description="The file path")):
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="File not found")
@@ -660,13 +873,11 @@ async def read_file(path: str = Query(..., description="The file path")):
         content = file.read()
     return content
 
-
 @app.post("/test1")
 async def test1():
-    return {"yaya": "yeah"}
+    return {"yaya":"yeah"}
 
 
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
